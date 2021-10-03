@@ -1,8 +1,8 @@
+import os
 import secrets
 import random
 import sys
 from Crypto.Cipher import AES
-from Crypto import Random   
 
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -127,10 +127,14 @@ def decryptAES(cipherAESd,cipherText):
     return dec
     
 
+def getNonce():
+    key = secrets.token_hex(16)
+    KeyAES=key.encode('utf-8')
+    cipherAESe = AES.new(KeyAES,AES.MODE_GCM)
+    return cipherAESe.nonce
 
 
-
-def main():
+def main(path):
     print("******************************************************************")
     print("******************************************************************")
     print("Welcome...")
@@ -150,10 +154,9 @@ def main():
     #Encrypts the message under the data encapsulation scheme, using the symmetric key just generated.
     plainText = input("Enter the message: ")
     cipherAESe = AES.new(KeyAES,AES.MODE_GCM)
-    nonce = cipherAESe.nonce
     print("Encrypting the message with AES......")
     cipherText=encryptAES(cipherAESe,plainText)
-    f=open(r"<text-file>","w+b")
+    f=open(path, "w+b")
     f.write(cipherText)
     f.close()
     print("Upload Done")
@@ -162,21 +165,20 @@ def main():
     print("Encrypting the AES symmetric key with RSA......")
 
     mail_content = ("Hello, \nThis mail contains all those important details that you will need to access your file.. \nIn this mail we are sending decript.py through which you can decrypt the text file from AWS Cloud.\nThank You \n Private Key: " + str(pri) + "\n AES Symmetric Key: " + str(cipherKey))
-    sender_address = '<sender-emailID>'
-    sender_pass = '<password>'
-    receiver_address = '<receiver-emailID'
+    sender_address = os.getenv('EMAIL_ADDRESS')
+    sender_pass = os.getenv('EMAIL_PASSWORD')
+    receiver_address = os.getenv('RECEIVER_ADDRESS')
     message = MIMEMultipart()
     message['From'] = sender_address
     message['To'] = receiver_address
     message['Subject'] = 'Important Keys for Decryption'
     message.attach(MIMEText(mail_content, 'plain'))
-    attach_file_name = (r'<file-name-with-location>')
-    attach_file = open(attach_file_name, 'rb') # Open the file as binary mode
+    attach_file = open(path, 'rb') # Open the file as binary mode
     payload = MIMEBase('application', 'octate-stream')
     payload.set_payload((attach_file).read())
     encoders.encode_base64(payload) #encode the attachment
     #add payload header with filename
-    payload.add_header('Content-Decomposition', 'attachment', filename=attach_file_name)
+    payload.add_header('Content-Decomposition', 'attachment', filename=path)
     message.attach(payload)
     #Create SMTP session for sending the mail
     session = smtplib.SMTP('smtp.gmail.com', 587) #use gmail with port
